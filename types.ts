@@ -294,32 +294,12 @@ export type Facet = {
   functionSelectors: string[];
 };
 
-export interface DeploymentSubmission {
-  abi: ABI;
-  address: Address; // used to override receipt.contractAddress (useful for proxies)
-  receipt?: Receipt;
-  transactionHash?: string;
-  history?: Deployment[];
-  implementation?: string;
-  args?: any[];
-  linkedData?: any;
+export interface DeploymentSubmission extends Deployment {
   solcInput?: string;
-  solcInputHash?: string;
-  metadata?: string;
-  bytecode?: string;
-  deployedBytecode?: string;
-  userdoc?: any;
-  devdoc?: any;
-  methodIdentifiers?: any;
-  diamondCut?: FacetCut[];
-  facets?: Facet[];
   execute?: {
     methodName: string;
     args: any[];
   };
-  storageLayout?: any;
-  libraries?: Libraries;
-  gasEstimates?: any;
 }
 
 // export type LibraryReferences = {
@@ -329,6 +309,7 @@ export interface DeploymentSubmission {
 export interface Deployment {
   address: Address;
   abi: ABI;
+  artifactName?: string
   receipt?: Receipt;
   transactionHash?: string;
   history?: Deployment[];
