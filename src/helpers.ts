@@ -230,8 +230,7 @@ export function addHelpers(
   getArtifact: (name: string) => Promise<Artifact>,
   saveDeployment: (
     name: string,
-    deployment: DeploymentSubmission,
-    artifactName?: string
+    deployment: DeploymentSubmission
   ) => Promise<void>,
   willSaveToDisk: () => boolean,
   onPendingTx: (
@@ -473,6 +472,7 @@ export function addHelpers(
         artifact = await getArtifact(artifactName);
       } else {
         artifact = options.contract as Artifact; // TODO better handling
+        artifactName = artifact.contractName
       }
     } else {
       artifactName = name;
@@ -613,12 +613,13 @@ export function addHelpers(
         : receipt.contractAddress;
     const deployment = {
       ...preDeployment,
+      artifactName,
       address,
       receipt,
       transactionHash: receipt.transactionHash,
       libraries: options.libraries,
     };
-    await saveDeployment(name, deployment, artifactName);
+    await saveDeployment(name, deployment);
     if (options.log || hardwareWallet) {
       print(
         `: deployed at ${deployment.address} with ${receipt?.gasUsed} gas\n`
@@ -805,12 +806,13 @@ export function addHelpers(
           // receipt missing
           const newDeployment = {
             ...linkedArtifact,
+            artifactName,
             address: diffResult.address,
             linkedData: options.linkedData,
             libraries: options.libraries,
             args: argsArray,
           };
-          await saveDeployment(name, newDeployment, artifactName);
+          await saveDeployment(name, newDeployment);
           result = {
             ...newDeployment,
             newlyDeployed: false,
@@ -837,7 +839,7 @@ export function addHelpers(
           libraries: options.libraries,
           args: argsArray,
         };
-        await saveDeployment(name, newDeployment, artifactName);
+        await saveDeployment(name, newDeployment);
         result = {
           ...newDeployment,
           newlyDeployed: false,
@@ -1265,6 +1267,7 @@ Note that in this case, the contract deployment will not behave the same if depl
       const proxiedDeployment: DeploymentSubmission = {
         ...proxyContract,
         receipt: proxy.receipt,
+        artifactName,
         address: proxy.address,
         linkedData: options.linkedData,
         abi: mergedABI,
@@ -1282,7 +1285,7 @@ Note that in this case, the contract deployment will not behave the same if depl
           ? proxiedDeployment.history.concat([oldDeployment])
           : [oldDeployment];
       }
-      await saveDeployment(name, proxiedDeployment, artifactName);
+      await saveDeployment(name, proxiedDeployment);
 
       const deployment = await partialExtension.get(name);
       return {
@@ -1306,7 +1309,7 @@ Note that in this case, the contract deployment will not behave the same if depl
         proxiedDeployment.history = proxiedDeployment.history
           ? proxiedDeployment.history.concat([oldDeployment])
           : [oldDeployment];
-        await saveDeployment(name, proxiedDeployment, oldDeployment.artifactName);
+        await saveDeployment(name, proxiedDeployment);
       }
 
       const deployment = await partialExtension.get(name);
@@ -1672,10 +1675,11 @@ Note that in this case, the contract deployment will not behave the same if depl
         if (expectedAddress && deterministicDiamondAlreadyDeployed) {
           proxy = {
             ...diamondBase,
+            artifactName: diamondBase.contractName,
             address: expectedAddress,
             args: diamondArgs,
           };
-          await saveDeployment(proxyName, proxy, proxy.contractName);
+          await saveDeployment(proxyName, proxy);
         } else {
           const createReceipt = await execute(
             diamantaireName,
@@ -1720,18 +1724,20 @@ Note that in this case, the contract deployment will not behave the same if depl
           }
           proxy = {
             ...diamondBase,
+            artifactName: diamondBase.contractName,
             address: proxyAddress,
             receipt: createReceipt,
             transactionHash: createReceipt.transactionHash,
             args: diamondArgs,
           };
-          await saveDeployment(proxyName, proxy, proxy.contractName);
+          await saveDeployment(proxyName, proxy);
         }
 
         await saveDeployment(name, {
           ...diamondBase,
-          args: proxy.args,
+          artifactName: diamondBase.contractName,
           address: proxy.address,
+          args: proxy.args,
           receipt: proxy.receipt,
           transactionHash: proxy.transactionHash,
           linkedData: options.linkedData,
@@ -1739,7 +1745,7 @@ Note that in this case, the contract deployment will not behave the same if depl
           diamondCut: facetCuts,
           abi,
           execute: options.execute,
-        }, proxy.contractName);
+        });
       } else {
         if (!oldDeployment) {
           throw new Error(`Cannot find Deployment for ${name}`);
@@ -1776,12 +1782,13 @@ Note that in this case, the contract deployment will not behave the same if depl
             ? oldDeployment.history.concat(oldDeployment)
             : [oldDeployment],
           linkedData: options.linkedData,
+          artifactName: oldDeployment.artifactName,
           address: proxy.address,
           abi,
           facets: facetSnapshot,
           diamondCut: facetCuts,
           execute: options.execute,
-        }, oldDeployment.artifactName);
+        });
       }
 
       const deployment = await partialExtension.get(name);
@@ -1803,7 +1810,7 @@ Note that in this case, the contract deployment will not behave the same if depl
       // proxiedDeployment.history = proxiedDeployment.history
       //   ? proxiedDeployment.history.concat([oldDeployment])
       //   : [oldDeployment];
-      await saveDeployment(name, proxiedDeployment, proxiedDeployment.artifactName);
+      await saveDeployment(name, proxiedDeployment);
 
       const deployment = await partialExtension.get(name);
       return {
